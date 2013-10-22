@@ -128,8 +128,16 @@ class DiscreteParzenMutualInformation(SimilarityMeasure):
 
 class NormalizedMutualInformation(SimilarityMeasure):
     """
-    NMI = 2*(1 - H(I,J)/[H(I)+H(J)])
-        = 2*MI/[H(I)+H(J)])
+    NMI = [H(I) + H(H)] / H(I,J)
+
+    Note the previous implementation returned the entropy correlation
+    coefficient:
+
+    ECC = 2*(1 - H(I,J) / [H(I) + H(J)])
+        
+    which is equivalent to NMI (in the sense that it is an increasing
+    function of NMI) but is not the NMI measure as defined by
+    Studholme et al, Pattern Recognition, 1998.
     """
     def __call__(self, H):
         H = H / nonzero(self.npoints(H))
@@ -138,8 +146,8 @@ class NormalizedMutualInformation(SimilarityMeasure):
         entIJ = -np.sum(H * np.log(nonzero(H)))
         entI = -np.sum(hI * np.log(nonzero(hI)))
         entJ = -np.sum(hJ * np.log(nonzero(hJ)))
-        return 2 * (1 - entIJ / nonzero(entI + entJ))
-
+        #return 2 * (1 - entIJ / nonzero(entI + entJ))
+        return (entI + entJ) / nonzero(entIJ)
 
 class CorrelationCoefficient(SimilarityMeasure):
     """

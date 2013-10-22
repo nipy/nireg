@@ -300,7 +300,7 @@ static inline void _tri_interpolation(unsigned int i,
   }
   if (sumW > 0.0) {
     jm /= sumW;
-    H[UROUND(jm)+clampJ_i] += 1;
+    H[UROUND(jm)+clampJ_i] += sumW;
   }
   return; 
 }
