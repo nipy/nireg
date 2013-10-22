@@ -131,7 +131,7 @@ def test_supervised_likelihood_ratio():
 
 
 def test_normalized_mutual_information():
-    _test_similarity_measure('nmi', 1.0)
+    _test_similarity_measure('nmi', 2.0)
 
 
 def test_renormalized_correlation_coefficient():
