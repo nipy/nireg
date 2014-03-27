@@ -23,12 +23,6 @@ MAX_INT = np.iinfo(np.intp).max
 
 # Module globals
 VERBOSE = True  # enables online print statements
-OPTIMIZER = 'powell'
-XTOL = 1e-2
-FTOL = 1e-2
-GTOL = 1e-3
-MAXITER = 25
-MAXFUN = None
 CLAMP_DTYPE = 'short'  # do not edit
 NPOINTS = 64 ** 3
 
@@ -46,7 +40,8 @@ class HistogramRegistration(object):
                  from_bins=256, to_bins=None,
                  from_mask=None, to_mask=None,
                  similarity='crl1', interp='pv',
-                 smooth=0, renormalize=False, dist=None):
+                 smooth=0, renormalize='default',
+                 dist=None):
         """
         Creates a new histogram registration object.
 
@@ -129,7 +124,7 @@ class HistogramRegistration(object):
 
         # Set default registration parameters
         self._set_interp(interp)
-        self._set_similarity(similarity, renormalize=renormalize, dist=dist)
+        self._set_similarity(similarity, renormalize, dist=dist)
 
     def _get_interp(self):
         return list(interp_methods.keys())[\
@@ -185,7 +180,7 @@ class HistogramRegistration(object):
     def subsample(self, spacing=None, npoints=None):
         self.set_fov(spacing=spacing, npoints=npoints)
 
-    def _set_similarity(self, similarity, renormalize=False, dist=None):
+    def _set_similarity(self, similarity, renormalize='default', dist=None):
         if similarity in _sms:
             if similarity == 'slr':
                 if dist is None:
@@ -195,7 +190,9 @@ class HistogramRegistration(object):
                     raise ValueError('Wrong shape for the `dist` argument')
             self._similarity = similarity
             self._similarity_call =\
-                _sms[similarity](self._joint_hist.shape, renormalize, dist)
+                _sms[similarity](self._joint_hist.shape,
+                                 self._from_npoints,
+                                 renormalize=renormalize, dist=dist)
         else:
             if not hasattr(similarity, '__call__'):
                 raise ValueError('similarity should be callable')
@@ -312,7 +309,8 @@ class HistogramRegistration(object):
                          interp)
         return self._similarity_call(self._joint_hist)
 
-    def optimize(self, T, optimizer=OPTIMIZER, **kwargs):
+    def optimize(self, T, optimizer='powell', xtol=1e-2, ftol=1e-2, gtol=1e-3,
+                 maxiter=25, maxfun=None, **kwargs):
         """ Optimize transform `T` with respect to similarity measure.
 
         The input object `T` will change as a result of the optimization.
@@ -367,11 +365,11 @@ class HistogramRegistration(object):
             print('Initial guess...')
             print(Tv.optimizable)
 
-        kwargs.setdefault('xtol', XTOL)
-        kwargs.setdefault('ftol', FTOL)
-        kwargs.setdefault('gtol', GTOL)
-        kwargs.setdefault('maxiter', MAXITER)
-        kwargs.setdefault('maxfun', MAXFUN)
+        kwargs.setdefault('xtol', xtol)
+        kwargs.setdefault('ftol', ftol)
+        kwargs.setdefault('gtol', gtol)
+        kwargs.setdefault('maxiter', maxiter)
+        kwargs.setdefault('maxfun', maxfun)
 
         fmin, args, kwargs = configure_optimizer(optimizer,
                                                  fprime=None,
