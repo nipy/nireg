@@ -196,6 +196,8 @@ class CorrelationCoefficient(SimilarityMeasure):
         rho2 = (cIJ / nonzero(np.sqrt(vI * vJ))) ** 2
         if self.renormalize:
             rho2 = correlation2loglikelihood(rho2, npts, self.total_npoints)
+            if self.renormalize == 2:
+                rho2 -= self.overlap_penalty(npts)
         return rho2
 
 
@@ -275,7 +277,7 @@ class ReverseCorrelationRatioL1(CorrelationRatio):
     as a distribution model
     """
     def __call__(self, H):
-        eta, npts = correlation_ratio_L1(H.T)
+        eta, npts = correlation_ratio_L1(H)
         if self.renormalize:
             eta = -(npts / self.total_npoints) * np.log(nonzero(1 - eta))
         return eta

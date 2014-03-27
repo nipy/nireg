@@ -65,8 +65,9 @@ command-line options.
 Dependencies
 ============
 
-To run NIREG, you will need:
 
+To run NIREG, you will need:
+=======
 * python_ >= 2.5 (tested with 2.5, 2.6, 2.7, 3.2, 3.3)
 * numpy_ >= 1.2
 * scipy_ >= 0.7.0

@@ -94,7 +94,6 @@ class HistogramRegistration(object):
          kernels used to smooth the `from` and `to` images,
          respectively. If float, the same kernel size is applied to
          both images. If 0, no smoothing is applied.
-
         """
         # Binning sizes
         from_bins, to_bins = unpack(bins, int)
