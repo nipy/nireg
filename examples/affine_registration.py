@@ -38,13 +38,15 @@ mi (mutual information), nmi (normalized mutual information), \
 pmi (Parzen mutual information), dpmi (discrete Parzen mutual \
 information). Default is crl1.'
 
-doc_renormalize = 'similarity renormalization: 0 or 1. Default is 0.'
+doc_renormalize = 'similarity renormalization: default, ml or nml.'
 
 doc_interp = 'interpolation method: tri (trilinear), pv (partial volume), \
 rand (random). Default is pv.'
 
 doc_optimizer = 'optimization method: simplex, powell, steepest, cg, bfgs. \
 Default is powell.'
+
+doc_tol = 'numerical tolerance on similarity values: default is 0.01'
 
 parser.add_option('-s', '--similarity', dest='similarity',
                   help=doc_similarity)
@@ -54,28 +56,35 @@ parser.add_option('-i', '--interp', dest='interp',
                   help=doc_interp)
 parser.add_option('-o', '--optimizer', dest='optimizer',
                   help=doc_optimizer)
+parser.add_option('-t', '--tol', dest='tol',
+                  help=doc_tol)
 opts, args = parser.parse_args()
 
 
 # Optional arguments
 similarity = 'crl1'
-renormalize = False
+renormalize = 'default'
 interp = 'pv'
 optimizer = 'powell'
 if not opts.similarity == None:
     similarity = opts.similarity
 if not opts.renormalize == None:
-    renormalize = bool(int(opts.renormalize))
+    renormalize = opts.renormalize
 if not opts.interp == None:
     interp = opts.interp
 if not opts.optimizer == None:
     optimizer = opts.optimizer
+if not opts.tol == None:
+    tol = float(opts.tol)
 
 # Print messages
 print('Source brain: %s' % source)
 print('Target brain: %s' % target)
 print('Similarity measure: %s' % similarity)
+print('Renormalization: %s' % renormalize)
+print('Interpolation: %s' % interp)
 print('Optimizer: %s' % optimizer)
+print('Tolerance: %f' % tol)
 
 # Get data
 print('Fetching image data...')
@@ -89,7 +98,7 @@ print('Setting up registration...')
 tic = time.time()
 R = HistogramRegistration(I, J, similarity=similarity, interp=interp,
                           renormalize=renormalize)
-T = R.optimize('affine', optimizer=optimizer)
+T = R.optimize('affine', optimizer=optimizer, xtol=tol, ftol=tol)
 toc = time.time()
 print('  Registration time: %f sec' % (toc - tic))
 
