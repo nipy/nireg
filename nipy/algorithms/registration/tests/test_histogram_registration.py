@@ -90,22 +90,16 @@ def _test_similarity_measure(simi, val):
     assert_almost_equal(R.eval(Affine()), val)
 
 
-def _test_renormalization1(simi):
+def _test_renormalization(simi, simi2ll):
     I = make_xyz_image(make_data_int16(), dummy_affine, 'scanner')
-    R = HistogramRegistration(I, I)
+    J = make_xyz_image(make_data_int16(), dummy_affine, 'scanner')
+    R = HistogramRegistration(I, J, similarity=simi)
     R.subsample(spacing=[2, 1, 3])
-    R._set_similarity(simi, renormalize=True)
-    assert R.eval(Affine()) > 1e5
-
-
-def _test_renormalization2(simi):
-    I = make_xyz_image(make_data_int16(), dummy_affine, 'scanner')
-    I0 = make_xyz_image(np.zeros(I.shape, dtype='int16'),
-                        dummy_affine, 'scanner')
-    R = HistogramRegistration(I0, I)
-    R.subsample(spacing=[2, 1, 3])
-    R._set_similarity(simi, renormalize=True)
-    assert_almost_equal(R.eval(Affine()), 0)
+    def_s = simi2ll(R.eval(Affine()))
+    R._set_similarity(simi, renormalize='ml')
+    assert_almost_equal(R.eval(Affine()), def_s)
+    R._set_similarity(simi, renormalize='nml')
+    assert_almost_equal(R.eval(Affine()), def_s)
 
 
 def test_correlation_coefficient():
@@ -125,18 +119,23 @@ def test_normalized_mutual_information():
 
 
 def test_renormalized_correlation_coefficient():
-    _test_renormalization1('cc')
-    _test_renormalization2('cc')
+    simi2ll = lambda x: -.5 * np.log(1 - x)
+    _test_renormalization('cc', simi2ll)
 
 
 def test_renormalized_correlation_ratio():
-    _test_renormalization1('cr')
-    _test_renormalization2('cr')
+    simi2ll = lambda x: -.5 * np.log(1 - x)
+    _test_renormalization('cr', simi2ll)
 
 
 def test_renormalized_correlation_ratio_l1():
-    _test_renormalization1('crl1')
-    _test_renormalization2('crl1')
+    simi2ll = lambda x: -np.log(1 - x)
+    _test_renormalization('crl1', simi2ll)
+
+
+def test_renormalized_mutual_information():
+    simi2ll = lambda x: x
+    _test_renormalization('mi', simi2ll)
 
 
 def test_joint_hist_eval():

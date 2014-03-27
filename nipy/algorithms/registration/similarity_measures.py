@@ -5,6 +5,8 @@ from scipy.ndimage import gaussian_filter
 
 TINY = float(np.finfo(np.double).tiny)
 SIGMA_FACTOR = 0.05
+RENORMALIZATIONS = {'default': 0, 'ml': 1, 'nml': 2}
+OVERLAP_MIN = 0.01
 
 # A lambda function to force positive values
 nonzero = lambda x: np.maximum(x, TINY)
@@ -63,11 +65,13 @@ class SimilarityMeasure(object):
     """
     Template class
     """
-    def __init__(self, shape, renormalize=False, dist=None):
+    def __init__(self, shape, total_npoints, renormalize=None, dist=None):
         self.shape = shape
         self.J, self.I = np.indices(shape)
-        self.renormalize = renormalize
+        self.renormalize = RENORMALIZATIONS[renormalize]
         self.dist = dist
+        self.total_npoints = nonzero(float(total_npoints))
+        self.penalty = .5 * self.degrees_of_freedom() / self.total_npoints
 
     def loss(self, H):
         return np.zeros(H.shape)
@@ -75,10 +79,21 @@ class SimilarityMeasure(object):
     def npoints(self, H):
         return H.sum()
 
+    def overlap_penalty(self, npts):
+        overlap = npts / self.total_npoints
+        return self.penalty * np.log(max(OVERLAP_MIN, overlap))
+
+    def degrees_of_freedom(self):
+        return 0
+
     def __call__(self, H):
         total_loss = np.sum(H * self.loss(H))
-        if not self.renormalize:
+        if self.renormalize == 0:
             total_loss /= nonzero(self.npoints(H))
+        elif self.renormalize > 0:
+            total_loss /= self.total_npoints
+            if self.renormalize == 2:
+                total_loss += self.overlap_penalty(self.npoints(H))
         return -total_loss
 
 
@@ -99,8 +114,12 @@ class MutualInformation(SimilarityMeasure):
     def loss(self, H):
         return dist2loss(H / nonzero(self.npoints(H)))
 
+    def degrees_of_freedom(self):
+        return np.prod(self.shape) - np.sum(self.shape)
 
-class ParzenMutualInformation(SimilarityMeasure):
+
+
+class ParzenMutualInformation(MutualInformation):
     """
     Use Parzen windowing to estimate the distribution model
     """
@@ -113,7 +132,7 @@ class ParzenMutualInformation(SimilarityMeasure):
         return dist2loss(Hs)
 
 
-class DiscreteParzenMutualInformation(SimilarityMeasure):
+class DiscreteParzenMutualInformation(MutualInformation):
     """
     Use Parzen windowing in the discrete case to estimate the
     distribution model
@@ -149,6 +168,7 @@ class NormalizedMutualInformation(SimilarityMeasure):
         #return 2 * (1 - entIJ / nonzero(entI + entJ))
         return (entI + entJ) / nonzero(entIJ)
 
+
 class CorrelationCoefficient(SimilarityMeasure):
     """
     Use a bivariate Gaussian as a distribution model
@@ -163,6 +183,9 @@ class CorrelationCoefficient(SimilarityMeasure):
         L += .5 * np.log(tmp)
         return L
 
+    def degrees_of_freedom(self):
+        return 1
+
     def __call__(self, H):
         npts = nonzero(self.npoints(H))
         mI = np.sum(H * self.I) / npts
@@ -172,7 +195,9 @@ class CorrelationCoefficient(SimilarityMeasure):
         cIJ = np.sum(H * self.J * self.I) / npts - mI * mJ
         rho2 = (cIJ / nonzero(np.sqrt(vI * vJ))) ** 2
         if self.renormalize:
-            rho2 = correlation2loglikelihood(rho2, npts)
+            rho2 = correlation2loglikelihood(rho2, npts) / self.total_npoints
+            if self.renormalize == 2:
+                rho2 -= self.overlap_penalty(npts)
         return rho2
 
 
@@ -195,11 +220,16 @@ class CorrelationRatio(SimilarityMeasure):
         mean_vI_J = np.sum(hJ * vI_J) / tmp
         eta2 = 1. - mean_vI_J / nonzero(vI)
         if self.renormalize:
-            eta2 = correlation2loglikelihood(eta2, npts)
+            eta2 = correlation2loglikelihood(eta2, npts) / self.total_npoints
+            if self.renormalize == 2:
+                eta2 -= self.overlap_penalty(npts)
         return eta2
 
+    def degrees_of_freedom(self):
+        return self.shape[0] - 1
 
-class CorrelationRatioL1(SimilarityMeasure):
+
+class CorrelationRatioL1(CorrelationRatio):
     """
     Use a nonlinear regression model with Laplace distributed errors
     as a distribution model
@@ -211,10 +241,14 @@ class CorrelationRatioL1(SimilarityMeasure):
         hJ = np.sum(H, 1)
         npts, mI, sI = _L1_moments(hI)
         mean_sI_J = np.sum(hJ * sI_J) / nonzero(npts)
-        eta2 = 1. - mean_sI_J / nonzero(sI)
-        if self.renormalize:
-            eta2 = correlation2loglikelihood(eta2, npts)
-        return eta2
+        tmp = mean_sI_J / nonzero(sI)
+        if self.renormalize == 0:
+            eta = 1. - tmp
+        elif self.renormalize > 0:
+            eta = -(npts / self.total_npoints) * np.log(nonzero(tmp))
+            if self.renormalize == 2:
+                eta -= self.overlap_penalty(npts)
+        return eta
 
 
 similarity_measures = {
