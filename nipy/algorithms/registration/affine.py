@@ -101,6 +101,7 @@ def to_matrix44(t, dtype=np.double):
     size >= 12 ==> t is interpreted as translation + rotation +
     scaling + pre-rotation
     """
+    t = np.asarray(t)
     size = t.size
     T = np.eye(4, dtype=dtype)
     R = rotation_vec2mat(t[3:6])
@@ -293,6 +294,9 @@ class Affine(Transform):
     def _get_precond(self):
         return self._precond
 
+    def _get_vec(self):
+        return self.param * self._precond[self.param_inds]
+
     translation = property(_get_translation, _set_translation)
     rotation = property(_get_rotation, _set_rotation)
     scaling = property(_get_scaling, _set_scaling)
@@ -300,6 +304,7 @@ class Affine(Transform):
     is_direct = property(_get_direct)
     precond = property(_get_precond)
     param = property(_get_param, _set_param)
+    vec = property(_get_vec)
 
     def as_affine(self, dtype='double'):
         T = to_matrix44(self._vec12, dtype=dtype)
