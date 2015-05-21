@@ -12,7 +12,7 @@ from .groupwise_registration import (interp_slice_times, scanner_coords,
                                      resample4d, adjust_subsampling,
                                      single_run_realign4d, realign4d,
                                      SpaceTimeRealign,
-                                     Realign4d, FmriRealign4d)
+                                     Realign4d)
 
 from numpy.testing import Tester
 test = Tester().test
