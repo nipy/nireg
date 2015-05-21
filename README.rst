@@ -1,37 +1,12 @@
 .. -*- rest -*-
 .. vim:syntax=rst
 
-.. image:: https://coveralls.io/repos/nipy/nipy/badge.png?branch=master
-    :target: https://coveralls.io/r/nipy/nipy?branch=master
+========
+REGISTER
+========
 
-.. Following contents should be from LONG_DESCRIPTION in nipy/info.py
+Image registration package for Python.
 
-
-====
-NIPY
-====
-
-Neuroimaging tools for Python.
-
-The aim of NIPY is to produce a platform-independent Python environment for
-the analysis of functional brain imaging data using an open development model.
-
-In NIPY we aim to:
-
-1. Provide an open source, mixed language scientific programming environment
-   suitable for rapid development.
-
-2. Create software components in this environment to make it easy to develop
-   tools for MRI, EEG, PET and other modalities.
-
-3. Create and maintain a wide base of developers to contribute to this
-   platform.
-
-4. To maintain and develop this framework as a single, easily installable
-   bundle.
-
-NIPY is the work of many people. We list the main authors in the file
-``AUTHOR`` in the NIPY distribution, and other contributions in ``THANKS``.
 
 Website
 =======
@@ -65,7 +40,7 @@ You can find our sources and single-click downloads:
 * Download the `current development version`_ as a tar/zip file;
 * Downloads of all `available releases`_.
 
-.. _main repository: http://github.com/nipy/nipy
+.. _main repository: http://github.com/nipy/register
 .. _Documentation: http://nipy.org/nipy
 .. _current development version: https://github.com/nipy/nipy/archive/master.zip
 .. _available releases: http://pypi.python.org/pypi/nipy
@@ -90,12 +65,11 @@ command-line options.
 Dependencies
 ============
 
-To run NIPY, you will need:
+To run REGISTER, you will need:
 
-* python_ >= 2.6 (tested with 2.6, 2.7, 3.2 through 3.5)
-* numpy_ >= 1.6.0
-* scipy_ >= 0.9.0
-* sympy_ >= 0.7.0
+* python_ >= 2.5 (tested with 2.5, 2.6, 2.7, 3.2, 3.3)
+* numpy_ >= 1.2
+* scipy_ >= 0.7.0
 * nibabel_ >= 1.2
 
 You will probably also like to have:
