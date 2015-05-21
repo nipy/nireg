@@ -11,18 +11,15 @@ import numpy as np
 from nibabel import (load, Nifti1Image, io_orientation)
 
 from ..testing import funcfile
-from ..groupwise_registration import (Image4d, resample4d, FmriRealign4d,
-                                      SpaceTimeRealign, SpaceRealign, Realign4d)
+from ..groupwise_registration import (Image4d,
+                                      resample4d,
+                                      SpaceTimeRealign,
+                                      SpaceRealign,
+                                      Realign4d)
 from ..slicetiming.timefuncs import st_43210, st_02413, st_42031
 from ..affine import Rigid
 
 im = load(funcfile)
-
-def test_futurewarning():
-    with warnings.catch_warnings(record=True) as warns:
-        warnings.simplefilter('always')
-        FmriRealign4d([im], tr=2., slice_order='ascending')
-        assert_equal(warns.pop(0).category, FutureWarning)
 
 
 def test_scanner_time():
@@ -49,62 +46,36 @@ def test_slice_timing():
 
 def test_realign4d_no_time_interp():
     runs = [im, im]
-    R = FmriRealign4d(runs, time_interp=False)
+    R = SpaceRealign(runs)
     assert R.slice_times == 0
 
 
 def test_realign4d_ascending():
     runs = [im, im]
-    R = FmriRealign4d(runs, tr=3, slice_order='ascending')
+    R = SpaceTimeRealign(runs, tr=3, slice_times='ascending', slice_info=2)
     assert_array_equal(R.slice_times, (0, 1, 2))
     assert R.tr == 3
 
 
 def test_realign4d_descending():
     runs = [im, im]
-    R = FmriRealign4d(runs, tr=3, slice_order='descending')
+    R = SpaceTimeRealign(runs, tr=3, slice_times='descending', slice_info=2)
     assert_array_equal(R.slice_times, (2, 1, 0))
     assert R.tr == 3
 
 
 def test_realign4d_ascending_interleaved():
     runs = [im, im]
-    R = FmriRealign4d(runs, tr=3, slice_order='ascending', interleaved=True)
+    R = SpaceTimeRealign(runs, tr=3, slice_times='asc_alt_2', slice_info=2)
     assert_array_equal(R.slice_times, (0, 2, 1))
     assert R.tr == 3
 
 
 def test_realign4d_descending_interleaved():
     runs = [im, im]
-    R = FmriRealign4d(runs, tr=3, slice_order='descending', interleaved=True)
+    R = SpaceTimeRealign(runs, tr=3, slice_times='desc_alt_2', slice_info=2)
     assert_array_equal(R.slice_times, (1, 2, 0))
     assert R.tr == 3
-
-
-def wrong_call(slice_times=None, slice_order=None, tr_slices=None,
-               interleaved=None, time_interp=None):
-    runs = [im, im]
-    return FmriRealign4d(runs, tr=3, slice_times=slice_times,
-                         slice_order=slice_order,
-                         tr_slices=tr_slices,
-                         interleaved=interleaved,
-                         time_interp=time_interp)
-
-
-def test_realign4d_incompatible_args():
-    assert_raises(ValueError, wrong_call, slice_order=(0, 1, 2),
-                  interleaved=False)
-    assert_raises(ValueError, wrong_call, slice_times=(0, 1, 2),
-                  slice_order='ascending')
-    assert_raises(ValueError, wrong_call, slice_times=(0, 1, 2),
-                  slice_order=(0, 1, 2))
-    assert_raises(ValueError, wrong_call, slice_times=(0, 1, 2),
-                  time_interp=True)
-    assert_raises(ValueError, wrong_call, slice_times=(0, 1, 2),
-                  time_interp=False)
-    assert_raises(ValueError, wrong_call, time_interp=True)
-    assert_raises(ValueError, wrong_call, slice_times=(0, 1, 2),
-                  tr_slices=1)
 
 
 def test_realign4d():
