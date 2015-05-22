@@ -26,7 +26,7 @@ def test_registers():
                                      ):
         R = HistogramRegistration(anat_img, anat_img,
                                   similarity=cost,
-                                  interp=interp)
-        R.subsample([2,2,2])
+                                  interp=interp,
+                                  spacing=[2,2,2])
         affine = R.optimize(affine_type)
         yield assert_array_almost_equal, affine.as_affine(), np.eye(4), 2
