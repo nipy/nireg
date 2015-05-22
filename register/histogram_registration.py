@@ -34,6 +34,7 @@ class HistogramRegistration(object):
     def __init__(self, from_img, to_img,
                  from_bins=256, to_bins=None,
                  from_mask=None, to_mask=None,
+                 spacing=None,
                  similarity='crl1', interp='pv',
                  sigma=0, renormalize='default',
                  dist=None):
@@ -53,6 +54,12 @@ class HistogramRegistration(object):
           Mask to apply to the `from` image
         to_mask : array-like
           Mask to apply to the `to` image
+        spacing : None or sequence
+          A sequence of three integers representing the subsampling
+          factors applied to the `from` image grid for faster
+          similarity computation. If None, the spacing is set
+          automatically so as to trade off between registration
+          accuracy and computation time.
         similarity : str or callable
           Cost-function for assessing image similarity. If a string,
           one of 'cc': correlation coefficient, 'cr': correlation
@@ -68,6 +75,7 @@ class HistogramRegistration(object):
          Standard deviation(s) in millimeters of isotropic Gaussian
          kernels used to smooth the `from` and `to` images,
          respectively. If 0, no smoothing is applied.
+
         """
         # Binning sizes
         if to_bins is None:
@@ -90,11 +98,16 @@ class HistogramRegistration(object):
         # Set field of view in the `from` image with potential
         # subsampling for faster similarity evaluation. This also sets
         # the _from_data and _vox_coords attributes
-        if from_mask is None:
-            self.subsample(npoints=NPOINTS)
+        if spacing == None:
+            npoints = NPOINTS
+        else:
+            npoints = None
+        if from_mask == None:
+            corner, size = (0, 0, 0), None
         else:
             corner, size = smallest_bounding_box(from_mask)
-            self.set_fov(corner=corner, size=size, npoints=NPOINTS)
+        self.set_fov(spacing=spacing, corner=corner, size=size, 
+                     npoints=npoints)
 
         # Clamping of the `to` image including padding with -1
         data, to_bins = clamp(to_img, to_bins, mask=to_mask,
@@ -150,8 +163,7 @@ class HistogramRegistration(object):
         if spacing is not None:
             fov_data = self._from_img.get_data()[slicer(corner, size, spacing)]
         else:
-            fov_data = self._from_img.get_data()[
-                slicer(corner, size, [1, 1, 1])]
+            fov_data = self._from_img.get_data()[slicer(corner, size, [1, 1, 1])]
             spacing = ideal_spacing(fov_data, npoints=npoints)
             fov_data = self._from_img.get_data()[slicer(corner, size, spacing)]
         self._from_data = fov_data
@@ -159,11 +171,9 @@ class HistogramRegistration(object):
         self._from_affine = subgrid_affine(self._from_img.get_affine(),
                                            slicer(corner, size, spacing))
         # We cache the voxel coordinates of the clamped image
+        self._from_spacing = spacing
         self._vox_coords =\
             np.indices(self._from_data.shape).transpose((1, 2, 3, 0))
-
-    def subsample(self, spacing=None, npoints=None):
-        self.set_fov(spacing=spacing, npoints=npoints)
 
     def _set_similarity(self, similarity, renormalize='default', dist=None):
         if similarity in _sms:
