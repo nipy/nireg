@@ -37,7 +37,7 @@ def make_data_float64(dx=100, dy=100, dz=50):
 
 
 def _test_clamping(I, thI=0.0, clI=256, mask=None):
-    R = HistogramRegistration(I, I, from_bins=clI,
+    R = HistogramRegistration(I, I, bins=clI,
                               from_mask=mask, to_mask=mask,
                               spacing=[1, 1, 1])
     Ic = R._from_data
