@@ -38,8 +38,8 @@ def make_data_float64(dx=100, dy=100, dz=50):
 
 def _test_clamping(I, thI=0.0, clI=256, mask=None):
     R = HistogramRegistration(I, I, from_bins=clI,
-                              from_mask=mask, to_mask=mask)
-    R.subsample(spacing=[1, 1, 1])
+                              from_mask=mask, to_mask=mask,
+                              spacing=[1, 1, 1])
     Ic = R._from_data
     Ic2 = R._to_data[1:-1, 1:-1, 1:-1]
     assert_equal(Ic, Ic2)
@@ -87,8 +87,7 @@ def test_clamping_float64_nonstd():
 def _test_similarity_measure(simi, val):
     I = Nifti1Image(make_data_int16(), dummy_affine)
     J = Nifti1Image(I.get_data().copy(), dummy_affine)
-    R = HistogramRegistration(I, J)
-    R.subsample(spacing=[2, 1, 3])
+    R = HistogramRegistration(I, J, spacing=[2, 1, 3])
     R.similarity = simi
     assert_almost_equal(R.eval(Affine()), val)
 
@@ -96,8 +95,7 @@ def _test_similarity_measure(simi, val):
 def _test_renormalization(simi, simi2ll):
     I = Nifti1Image(make_data_int16(), dummy_affine)
     J = Nifti1Image(make_data_int16(), dummy_affine)
-    R = HistogramRegistration(I, J, similarity=simi)
-    R.subsample(spacing=[2, 1, 3])
+    R = HistogramRegistration(I, J, similarity=simi, spacing=[2, 1, 3])
     def_s = simi2ll(R.eval(Affine()))
     R._set_similarity(simi, renormalize='ml')
     assert_almost_equal(R.eval(Affine()), def_s)
@@ -156,16 +154,13 @@ def test_joint_hist_eval():
     # Obviously the data should be the same
     assert_array_equal(I.get_data(), J.get_data())
     # Instantiate default thing
-    R = HistogramRegistration(I, J)
+    R = HistogramRegistration(I, J, spacing=[1, 1, 1])
     R.similarity = 'cc'
     null_affine = Affine()
     val = R.eval(null_affine)
     assert_almost_equal(val, 1.0)
     # Try with what should be identity
-    R.subsample(spacing=[1, 1, 1])
     assert_array_equal(R._from_data.shape, I.shape)
-    val = R.eval(null_affine)
-    assert_almost_equal(val, 1.0)
 
 
 def test_joint_hist_raw():
@@ -196,8 +191,8 @@ def test_histogram_registration():
     """
     I = Nifti1Image(make_data_int16(), dummy_affine)
     J = Nifti1Image(I.get_data().copy(), dummy_affine)
-    R = HistogramRegistration(I, J)
-    assert_raises(ValueError, R.subsample, spacing=[0, 1, 3])
+    assert_raises(ValueError, HistogramRegistration,
+                  I, J, spacing=[0, 1, 3])
 
 
 def test_set_fov():
