@@ -11,7 +11,7 @@ from nibabel import Nifti1Image
 from .optimizer import configure_optimizer
 from .affine import inverse_affine, subgrid_affine, affine_transforms
 from .chain_transform import ChainTransform
-from .similarity_measures import similarity_measures as _sms
+from .similarity_measures import similarity_measures as builtin_simi
 from ._register import _joint_histogram
 
 MAX_INT = np.iinfo(np.intp).max
@@ -26,17 +26,29 @@ NPOINTS = 64 ** 3
 interp_methods = {'pv': 0, 'tri': 1, 'rand': -1}
 
 
+def unpack(val, numtype):
+    try:
+        tmp = numtype(val)
+        out = (tmp, tmp)
+    except:
+        out = (numtype(val[0]), numtype(val[1]))
+    return out
+
+
 class HistogramRegistration(object):
     """
     A class to reprensent a generic intensity-based image registration
     algorithm.
     """
     def __init__(self, from_img, to_img,
-                 from_bins=256, to_bins=None,
-                 from_mask=None, to_mask=None,
+                 from_mask=None,
+                 to_mask=None,
+                 bins=256,
                  spacing=None,
-                 similarity='crl1', interp='pv',
-                 sigma=0, renormalize='default',
+                 similarity='crl1',
+                 interp='pv',
+                 sigma=0,
+                 renormalize='default',
                  dist=None):
         """Creates a new histogram registration object.
 
@@ -46,14 +58,14 @@ class HistogramRegistration(object):
           `From` image
         to_img : nibabel image
           `To` image
-        from_bins : integer
-          Number of histogram bins to represent the `from` image
-        to_bins : integer
-          Number of histogram bins to represent the `to` image
         from_mask : array-like
           Mask to apply to the `from` image
         to_mask : array-like
           Mask to apply to the `to` image
+        bins : integer or sequence
+          Number of histogram bins to represent the `from` and `to`
+          image, respectively. If float, the same binning is applied
+          to both images.
         spacing : None or sequence
           A sequence of three integers representing the subsampling
           factors applied to the `from` image grid for faster
@@ -71,23 +83,18 @@ class HistogramRegistration(object):
        interp : str
          Interpolation method.  One of 'pv': Partial volume, 'tri':
          Trilinear, 'rand': Random interpolation.  See ``joint_histogram.c``
-       sigma : float or sequence of two floats
+       sigma : float or sequence
          Standard deviation(s) in millimeters of isotropic Gaussian
          kernels used to smooth the `from` and `to` images,
-         respectively. If 0, no smoothing is applied.
+         respectively. If float, the same kernel size is applied to
+         both images. If 0, no smoothing is applied.
 
         """
         # Binning sizes
-        if to_bins is None:
-            to_bins = from_bins
+        from_bins, to_bins = unpack(bins, int)
 
         # Smoothing kernel sizes
-        try:
-            tmp = float(sigma)
-            self._from_sigma = tmp
-            self._to_sigma = tmp
-        except:
-            self._from_sigma, self._to_sigma = sigma
+        self._from_sigma, self._to_sigma = unpack(sigma, float)
 
         # Clamping of the `from` image. The number of bins may be
         # overriden if unnecessarily large.
@@ -176,12 +183,13 @@ class HistogramRegistration(object):
             np.indices(self._from_data.shape).transpose((1, 2, 3, 0))
 
     def _set_similarity(self, similarity, renormalize='default', dist=None):
-        if similarity in _sms:
+        if similarity in builtin_simi:
             self._similarity = similarity
             self._similarity_call =\
-                _sms[similarity](self._joint_hist.shape,
-                                 self._from_npoints,
-                                 renormalize=renormalize, dist=dist)
+                builtin_simi[similarity](self._joint_hist.shape,
+                                         self._from_npoints,
+                                         renormalize=renormalize,
+                                         dist=dist)
         else:
             if not hasattr(similarity, '__call__'):
                 raise ValueError('similarity should be callable')
