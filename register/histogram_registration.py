@@ -37,10 +37,9 @@ class HistogramRegistration(object):
                  from_bins=256, to_bins=None,
                  from_mask=None, to_mask=None,
                  similarity='crl1', interp='pv',
-                 smooth=0, renormalize='default',
+                 sigma=0, renormalize='default',
                  dist=None):
-        """
-        Creates a new histogram registration object.
+        """Creates a new histogram registration object.
 
         Parameters
         ----------
@@ -70,19 +69,29 @@ class HistogramRegistration(object):
        interp : str
          Interpolation method.  One of 'pv': Partial volume, 'tri':
          Trilinear, 'rand': Random interpolation.  See ``joint_histogram.c``
-       smooth : float
-         Standard deviation in millimeters of an isotropic Gaussian
-         kernel used to smooth the `To` image. If 0, no smoothing is
-         applied.
+       sigma : float or sequence of two floats
+         Standard deviation(s) in millimeters of isotropic Gaussian
+         kernels used to smooth the `from` and `to` images,
+         respectively. If 0, no smoothing is applied.
         """
         # Binning sizes
         if to_bins is None:
             to_bins = from_bins
 
+        # Smoothing kernel sizes
+        try:
+            tmp = float(sigma)
+            self._from_sigma = tmp
+            self._to_sigma = tmp
+        except:
+            self._from_sigma, self._to_sigma = sigma
+
         # Clamping of the `from` image. The number of bins may be
         # overriden if unnecessarily large.
-        data, from_bins_adjusted = clamp(from_img.get_data(), from_bins,
-                                         mask=from_mask)
+        data, from_bins_adjusted = clamp(from_img,
+                                         from_bins,
+                                         mask=from_mask,
+                                         sigma=self._from_sigma)
         if not similarity == 'slr':
             from_bins = from_bins_adjusted
         self._from_img = Nifti1Image(data, from_img.get_affine())
@@ -97,15 +106,10 @@ class HistogramRegistration(object):
             self.set_fov(corner=corner, size=size, npoints=NPOINTS)
 
         # Clamping of the `to` image including padding with -1
-        self._smooth = float(smooth)
-        if self._smooth < 0:
-            raise ValueError('smoothing kernel cannot have negative scale')
-        elif self._smooth > 0:
-            data = smooth_image(to_img.get_data(), to_img.get_affine(),
-                                self._smooth)
-        else:
-            data = to_img.get_data()
-        data, to_bins_adjusted = clamp(data, to_bins, mask=to_mask)
+        data, to_bins_adjusted = clamp(to_img,
+                                       to_bins,
+                                       mask=to_mask,
+                                       sigma=self._to_sigma)
         if not similarity == 'slr':
             to_bins = to_bins_adjusted
         self._to_data = -np.ones(np.array(to_img.shape) + 2, dtype=CLAMP_DTYPE)
@@ -430,68 +434,6 @@ class HistogramRegistration(object):
         return simis, params
 
 
-def _clamp(x, y, bins):
-
-    # Threshold
-    dmaxmax = 2 ** (8 * y.dtype.itemsize - 1) - 1
-    dmax = bins - 1  # default output maximum value
-    if dmax > dmaxmax:
-        raise ValueError('Excess number of bins')
-    xmin = float(x.min())
-    xmax = float(x.max())
-    d = xmax - xmin
-
-    """
-    If the image dynamic is small, no need for compression: just
-    downshift image values and re-estimate the dynamic range (hence
-    xmax is translated to xmax-tth casted to the appropriate
-    dtype. Otherwise, compress after downshifting image values (values
-    equal to the threshold are reset to zero).
-    """
-    if issubclass(x.dtype.type, np.integer) and d <= dmax:
-        y[:] = x - xmin
-        bins = int(d) + 1
-    else:
-        a = dmax / d
-        y[:] = np.round(a * (x - xmin))
-
-    return y, bins
-
-
-def clamp(x, bins, mask=None):
-    """
-    Clamp array values that fall within a given mask in the range
-    [0..bins-1] and reset masked values to -1.
-
-    Parameters
-    ----------
-    x : ndarray
-      The input array
-    bins : number
-      Desired number of bins
-    mask : ndarray, tuple or slice
-      Anything such that x[mask] is an array.
-
-    Returns
-    -------
-    y : ndarray
-      Clamped array, masked items are assigned -1
-    bins : number
-      Adjusted number of bins
-    """
-    if bins > np.iinfo(np.short).max:
-        raise ValueError('Too large a bin size')
-    y = -np.ones(x.shape, dtype=CLAMP_DTYPE)
-    if mask is None:
-        y, bins = _clamp(x, y, bins)
-    else:
-        ym = y[mask]
-        xm = x[mask]
-        ym, bins = _clamp(xm, ym, bins)
-        y[mask] = ym
-    return y, bins
-
-
 def ideal_spacing(data, npoints):
     """
     Tune spacing factors so that the number of voxels in the
@@ -642,16 +584,14 @@ def approx_hessian(f, x, epsilon):
     return H
 
 
-def smooth_image(data, affine, sigma):
+def smooth(img, sigma):
     """
     Smooth an image by an isotropic Gaussian filter
 
     Parameters
     ----------
-    data: ndarray
-      Image data array
-    affine: ndarray
-      Image affine transform
+    img: nibabel-like image
+      Input image
     sigma: float
       Filter standard deviation in mm
 
@@ -660,5 +600,100 @@ def smooth_image(data, affine, sigma):
     sdata: ndarray
       Smoothed data array
     """
-    sigma_vox = sigma / np.sqrt(np.sum(affine[0:3, 0:3] ** 2, 0))
-    return nd.gaussian_filter(data, sigma_vox)
+    if sigma < 0:
+        raise ValueError('smoothing kernel size is negative')
+    elif sigma == 0:
+        return img.get_data()
+    else:
+        sigma_vox = sigma / np.sqrt(np.sum(img.get_affine()[0:3, 0:3] ** 2, 0))
+        return nd.gaussian_filter(img.get_data(), sigma_vox)
+
+
+def _clamp_array(x, y, bins):
+
+    # Threshold
+    dmaxmax = 2 ** (8 * y.dtype.itemsize - 1) - 1
+    dmax = bins - 1  # default output maximum value
+    if dmax > dmaxmax:
+        raise ValueError('Excess number of bins')
+    xmin = float(x.min())
+    xmax = float(x.max())
+    d = xmax - xmin
+
+    """
+    If the image dynamic is small, no need for compression: just
+    downshift image values and re-estimate the dynamic range (hence
+    xmax is translated to xmax-tth casted to the appropriate
+    dtype. Otherwise, compress after downshifting image values (values
+    equal to the threshold are reset to zero).
+    """
+    if issubclass(x.dtype.type, np.integer) and d <= dmax:
+        y[:] = x - xmin
+        bins = int(d) + 1
+    else:
+        a = dmax / d
+        y[:] = np.round(a * (x - xmin))
+
+    return y, bins
+
+
+def clamp_array(x, bins, mask=None):
+    """
+    Clamp array values that fall within a given mask in the range
+    [0..bins-1] and reset masked values to -1.
+
+    Parameters
+    ----------
+    x : ndarray
+      The input array
+    bins : number
+      Desired number of bins
+    mask : ndarray, tuple or slice
+      Anything such that x[mask] is an array.
+
+    Returns
+    -------
+    y : ndarray
+      Clamped array, masked items are assigned -1
+    bins : int
+      Adjusted number of bins
+    """
+    if bins > np.iinfo(np.short).max:
+        raise ValueError('Too large a bin size')
+    y = -np.ones(x.shape, dtype=CLAMP_DTYPE)
+    if mask is None:
+        y, bins = _clamp_array(x, y, bins)
+    else:
+        ym = y[mask]
+        xm = x[mask]
+        ym, bins = _clamp_array(xm, ym, bins)
+        y[mask] = ym
+    return y, bins
+
+
+def clamp(img, bins, mask=None, sigma=0):
+    """Remap in-mask image intensity values to the range
+    [0..bins-1]. Out-of-mask voxels are mapped to -1. A spatial
+    Gaussian filter is possibly applied as a pre-processing.
+
+    Parameters
+    ----------
+    img: nibabel-like image
+      Input image
+    bins : number
+      Desired number of bins
+    mask : ndarray, tuple or slice
+      Image mask
+    sigma: float
+      Gaussian filter standard deviation in mm
+
+    Returns
+    -------
+    data: ndarray
+      Clamped data array
+    bins: int
+      Adjusted number of bins
+
+    """
+    data = smooth(img, sigma)
+    return clamp_array(data, bins, mask=mask)

@@ -260,12 +260,12 @@ def test_smoothing():
                     dummy_affine)
     T = Rigid()
     R = HistogramRegistration(I, I)
-    R1 = HistogramRegistration(I, I, smooth=1)
+    R1 = HistogramRegistration(I, I, sigma=(0,1))
     s = R.eval(T)
     s1 = R1.eval(T)
     assert_almost_equal(s, 1)
     assert s1 < s
-    assert_raises(ValueError, HistogramRegistration, I, I, smooth=-1)
+    assert_raises(ValueError, HistogramRegistration, I, I, sigma=-1)
 
 
 if __name__ == "__main__":
