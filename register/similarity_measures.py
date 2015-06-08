@@ -12,14 +12,13 @@ OVERLAP_MIN = 0.01
 nonzero = lambda x: np.maximum(x, TINY)
 
 
-def correlation2loglikelihood(rho2, npts):
-    """
-    Re-normalize correlation.
+def correlation2loglikelihood(rho2, npts, total_npts):
+    """Re-normalize correlation.
 
-    Convert a squared normalized correlation to a proper
-    log-likelihood associated with a registration problem. The result
-    is a function of both the input correlation and the number of
-    points in the image overlap.
+    Convert a squared normalized correlation to a composite
+    log-likelihood function of the registration transformation
+    parameters. The result is a function of both the input correlation
+    and the fraction of points in the image overlap.
 
     See: Roche, medical image registration through statistical
     inference, 2001.
@@ -30,14 +29,21 @@ def correlation2loglikelihood(rho2, npts):
       Squared correlation measure
 
     npts: int
-      Number of points involved in computing `rho2`
+      Number of source image voxels that transform within the domain
+      of the reference image.
+
+    total_npts: int
+      Total number of source image voxels involved in computing the
+      correlation, including voxels transforming outside the target
+      image domain.
 
     Returns
     -------
     ll: float
-      Log-likelihood re-normalized `rho2`
+      Logarithm of composite likelihood registration function.
     """
-    return -.5 * npts * np.log(nonzero(1 - rho2))
+    tmp = float(npts) / total_npts
+    return -.5 * tmp * np.log(nonzero(1 - rho2))
 
 
 def dist2loss(q, qI=None, qJ=None):
@@ -71,7 +77,6 @@ class SimilarityMeasure(object):
         self.renormalize = RENORMALIZATIONS[renormalize]
         self.dist = dist
         self.total_npoints = nonzero(float(total_npoints))
-        self.penalty = .5 * self.degrees_of_freedom() / self.total_npoints
 
     def loss(self, H):
         return np.zeros(H.shape)
@@ -83,17 +88,12 @@ class SimilarityMeasure(object):
         overlap = npts / self.total_npoints
         return self.penalty * np.log(max(OVERLAP_MIN, overlap))
 
-    def degrees_of_freedom(self):
-        return 0
-
     def __call__(self, H):
         total_loss = np.sum(H * self.loss(H))
         if self.renormalize == 0:
             total_loss /= nonzero(self.npoints(H))
-        elif self.renormalize > 0:
+        else:
             total_loss /= self.total_npoints
-            if self.renormalize == 2:
-                total_loss += self.overlap_penalty(self.npoints(H))
         return -total_loss
 
 
@@ -113,9 +113,6 @@ class MutualInformation(SimilarityMeasure):
     """
     def loss(self, H):
         return dist2loss(H / nonzero(self.npoints(H)))
-
-    def degrees_of_freedom(self):
-        return np.prod(self.shape) - np.sum(self.shape)
 
 
 
@@ -183,9 +180,6 @@ class CorrelationCoefficient(SimilarityMeasure):
         L += .5 * np.log(tmp)
         return L
 
-    def degrees_of_freedom(self):
-        return 1
-
     def __call__(self, H):
         npts = nonzero(self.npoints(H))
         mI = np.sum(H * self.I) / npts
@@ -195,38 +189,66 @@ class CorrelationCoefficient(SimilarityMeasure):
         cIJ = np.sum(H * self.J * self.I) / npts - mI * mJ
         rho2 = (cIJ / nonzero(np.sqrt(vI * vJ))) ** 2
         if self.renormalize:
-            rho2 = correlation2loglikelihood(rho2, npts) / self.total_npoints
-            if self.renormalize == 2:
-                rho2 -= self.overlap_penalty(npts)
+            rho2 = correlation2loglikelihood(rho2, npts, self.total_npoints)
         return rho2
 
 
+def correlation_ratio(H, Y):
+    """Use a nonlinear regression model with Gaussian errors as a
+    distribution model.
+
+    Assume the input joint histogram has shape (dimX, dimY) where X is
+    the predictor and Y is the response variable.
+
+    Input array Y must be of same shape as H.
+    """
+    npts_X = np.sum(H, 1)
+    tmp = nonzero(npts_X)
+    mY_X = np.sum(H * Y, 1) / tmp
+    vY_X = np.sum(H * (Y ** 2), 1) / tmp - mY_X ** 2
+    npts = np.sum(npts_X)
+    tmp = nonzero(npts)
+    hY = np.sum(H, 0)
+    hX = np.sum(H, 1)
+    mY = np.sum(hY * Y[0, :]) / tmp
+    vY = np.sum(hY * (Y[0, :] ** 2)) / tmp - mY ** 2
+    mean_vY_X = np.sum(hX * vY_X) / tmp
+    eta2 = 1. - mean_vY_X / nonzero(vY)
+    return eta2, npts
+
+
 class CorrelationRatio(SimilarityMeasure):
-    """
-    Use a nonlinear regression model with Gaussian errors as a
-    distribution model
-    """
     def __call__(self, H):
-        npts_J = np.sum(H, 1)
-        tmp = nonzero(npts_J)
-        mI_J = np.sum(H * self.I, 1) / tmp
-        vI_J = np.sum(H * (self.I) ** 2, 1) / tmp - mI_J ** 2
-        npts = np.sum(npts_J)
-        tmp = nonzero(npts)
-        hI = np.sum(H, 0)
-        hJ = np.sum(H, 1)
-        mI = np.sum(hI * self.I[0, :]) / tmp
-        vI = np.sum(hI * self.I[0, :] ** 2) / tmp - mI ** 2
-        mean_vI_J = np.sum(hJ * vI_J) / tmp
-        eta2 = 1. - mean_vI_J / nonzero(vI)
+        eta2, npts = correlation_ratio(H, self.I)
         if self.renormalize:
-            eta2 = correlation2loglikelihood(eta2, npts) / self.total_npoints
-            if self.renormalize == 2:
-                eta2 -= self.overlap_penalty(npts)
+            eta2 = correlation2loglikelihood(eta2, npts, self.total_npoints)
         return eta2
 
-    def degrees_of_freedom(self):
-        return self.shape[0] - 1
+
+class ReverseCorrelationRatio(SimilarityMeasure):
+    def __call__(self, H):
+        eta2, npts = correlation_ratio(H.T, self.J.T)
+        if self.renormalize:
+            eta2 = correlation2loglikelihood(eta2, npts, self.total_npoints)
+        return eta2
+
+
+def correlation_ratio_L1(H):
+    """
+    Use a nonlinear regression model with Laplace distributed errors
+    as a distribution model.
+
+    Assume the input joint histogram has shape (dimX, dimY) where X is
+    the predictor and Y is the response variable.
+    """
+    moments = np.array([_L1_moments(H[x, :]) for x in range(H.shape[0])])
+    npts_X, mY_X, sY_X = moments[:, 0], moments[:, 1], moments[:, 2]
+    hY = np.sum(H, 0)
+    hX = np.sum(H, 1)
+    npts, mY, sY = _L1_moments(hY)
+    mean_sY_X = np.sum(hX * sY_X) / nonzero(npts)
+    tmp = mean_sY_X / nonzero(sY)
+    return 1 - tmp, npts
 
 
 class CorrelationRatioL1(CorrelationRatio):
@@ -235,19 +257,21 @@ class CorrelationRatioL1(CorrelationRatio):
     as a distribution model
     """
     def __call__(self, H):
-        moments = np.array([_L1_moments(H[j, :]) for j in range(H.shape[0])])
-        npts_J, mI_J, sI_J = moments[:, 0], moments[:, 1], moments[:, 2]
-        hI = np.sum(H, 0)
-        hJ = np.sum(H, 1)
-        npts, mI, sI = _L1_moments(hI)
-        mean_sI_J = np.sum(hJ * sI_J) / nonzero(npts)
-        tmp = mean_sI_J / nonzero(sI)
-        if self.renormalize == 0:
-            eta = 1. - tmp
-        elif self.renormalize > 0:
-            eta = -(npts / self.total_npoints) * np.log(nonzero(tmp))
-            if self.renormalize == 2:
-                eta -= self.overlap_penalty(npts)
+        eta, npts = correlation_ratio_L1(H)
+        if self.renormalize:
+            eta = -(npts / self.total_npoints) * np.log(nonzero(1 - eta))
+        return eta
+
+
+class ReverseCorrelationRatioL1(CorrelationRatio):
+    """
+    Use a nonlinear regression model with Laplace distributed errors
+    as a distribution model
+    """
+    def __call__(self, H):
+        eta, npts = correlation_ratio_L1(H.T)
+        if self.renormalize:
+            eta = -(npts / self.total_npoints) * np.log(nonzero(1 - eta))
         return eta
 
 
@@ -259,4 +283,6 @@ similarity_measures = {
     'dpmi': DiscreteParzenMutualInformation,
     'cc': CorrelationCoefficient,
     'cr': CorrelationRatio,
-    'crl1': CorrelationRatioL1}
+    'crl1': CorrelationRatioL1,
+    'rcr': ReverseCorrelationRatio,
+    'rcrl1': ReverseCorrelationRatioL1}
