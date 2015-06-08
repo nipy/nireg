@@ -323,6 +323,8 @@ class HistogramRegistration(object):
                          self._to_data,
                          trans_vox_coords,
                          interp)
+        # Make sure all joint histogram entries are non-negative
+        np.maximum(self._joint_hist, 0, self._joint_hist)
         return self._similarity_call(self._joint_hist)
 
     def optimize(self, T, optimizer='powell', xtol=1e-2, ftol=1e-2, gtol=1e-3,
