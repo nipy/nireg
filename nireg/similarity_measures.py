@@ -5,7 +5,6 @@ from scipy.ndimage import gaussian_filter
 
 TINY = float(np.finfo(np.double).tiny)
 SIGMA_FACTOR = 0.05
-RENORMALIZATIONS = {'default': 0, 'ml': 1, 'nml': 2}
 OVERLAP_MIN = 0.01
 
 # A lambda function to force positive values
@@ -71,10 +70,10 @@ class SimilarityMeasure(object):
     """
     Template class
     """
-    def __init__(self, shape, total_npoints, renormalize=None, dist=None):
+    def __init__(self, shape, total_npoints, renormalize=False, dist=None):
         self.shape = shape
         self.J, self.I = np.indices(shape)
-        self.renormalize = RENORMALIZATIONS[renormalize]
+        self.renormalize = renormalize
         self.dist = dist
         self.total_npoints = nonzero(float(total_npoints))
 
@@ -90,10 +89,10 @@ class SimilarityMeasure(object):
 
     def __call__(self, H):
         total_loss = np.sum(H * self.loss(H))
-        if self.renormalize == 0:
-            total_loss /= nonzero(self.npoints(H))
-        else:
+        if self.renormalize:
             total_loss /= self.total_npoints
+        else:
+            total_loss /= nonzero(self.npoints(H))
         return -total_loss
 
 
