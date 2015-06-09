@@ -13,7 +13,7 @@ def configuration(parent_package='', top_path=None):
         delegate_options_to_subpackages=True,
         quiet=True,
     )
-    config.add_subpackage('register')
+    config.add_subpackage('nireg')
     return config
 
 
@@ -21,12 +21,12 @@ def setup_package(**extra_args):
     from numpy.distutils.core import setup
     setup(
         configuration=configuration,
-        name='register',
+        name='nireg',
         version=version,
         maintainer='nipy developers',
         maintainer_email='nipy-devel@neuroimaging.scipy.org',
         description='Image registration package',
-        url='https://github.com/nipy/register',
+        url='https://github.com/nipy/nireg',
         license='BSD license',
         requires = ('numpy', 'scipy', 'nibabel'),
         **extra_args)
