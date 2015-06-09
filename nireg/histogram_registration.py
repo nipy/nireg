@@ -50,7 +50,7 @@ class HistogramRegistration(object):
                  similarity='crl1',
                  interp='pv',
                  sigma=0,
-                 renormalize='default',
+                 renormalize=False,
                  dist=None):
         """Creates a new histogram registration object.
 
@@ -195,7 +195,7 @@ class HistogramRegistration(object):
         self._vox_coords =\
             np.indices(self._from_data.shape).transpose((1, 2, 3, 0))
 
-    def _set_similarity(self, similarity, renormalize='default', dist=None):
+    def _set_similarity(self, similarity, renormalize=False, dist=None):
         if similarity in builtin_simi:
             if similarity == 'slr':
                 if dist is None:
