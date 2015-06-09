@@ -1,9 +1,9 @@
 .. -*- rest -*-
 .. vim:syntax=rst
 
-========
-REGISTER
-========
+=====
+NIREG
+=====
 
 Image registration package for Python.
 
@@ -40,7 +40,7 @@ You can find our sources and single-click downloads:
 * Download the `current development version`_ as a tar/zip file;
 * Downloads of all `available releases`_.
 
-.. _main repository: http://github.com/nipy/register
+.. _main repository: http://github.com/nipy/nireg
 .. _Documentation: http://nipy.org/nipy
 .. _current development version: https://github.com/nipy/nipy/archive/master.zip
 .. _available releases: http://pypi.python.org/pypi/nipy
@@ -65,7 +65,7 @@ command-line options.
 Dependencies
 ============
 
-To run REGISTER, you will need:
+To run NIREG, you will need:
 
 * python_ >= 2.5 (tested with 2.5, 2.6, 2.7, 3.2, 3.3)
 * numpy_ >= 1.2
