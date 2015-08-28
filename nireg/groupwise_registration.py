@@ -29,7 +29,7 @@ from ._register import (_cspline_transform,
                         _cspline_sample4d)
 
 
-VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', False)
+VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', True)
 INTERLEAVED = None
 OPTIMIZER = 'ncg'
 XTOL = 1e-5
