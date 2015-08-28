@@ -20,7 +20,7 @@ from ._register import _joint_histogram
 MAX_INT = np.iinfo(np.intp).max
 
 # Module globals
-VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', True)  # enables online print statements
+VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', False)  # enables online print statements
 CLAMP_DTYPE = 'short'  # do not edit
 NPOINTS = 64 ** 3
 
