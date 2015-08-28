@@ -22,14 +22,14 @@ from __future__ import print_function  # Python 2/3 compatibility
 import os
 from os.path import split as psplit, abspath
 import numpy as np
-from nipy.algorithms.registration import SpaceTimeRealign
-from nipy import load_image, save_image
+import nibabel as nb
+from nireg import SpaceTimeRealign
 from nipy.utils import example_data
 
 # Input images are provided with the nipy-data package
 runnames = [example_data.get_filename('fiac', 'fiac0', run + '.nii.gz')
             for run in ('run1', 'run2')]
-runs = [load_image(run) for run in runnames]
+runs = [nb.load(run) for run in runnames]
 
 # Spatio-temporal realigner assuming interleaved ascending slice order
 R = SpaceTimeRealign(runs, tr=2.5, slice_times='asc_alt_2', slice_info=2)
@@ -55,4 +55,4 @@ print('Saving results in: %s' % cwd)
 for i in range(len(runs)):
     corr_run = R.resample(i)
     fname = 'ra' + psplit(runnames[i])[1]
-    save_image(corr_run, fname)
+    nb.save(corr_run, fname)

@@ -6,6 +6,7 @@ Intensity-based image registration
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
 import numpy as np
 import scipy.ndimage as nd
 from nibabel import Nifti1Image
@@ -19,7 +20,7 @@ from ._register import _joint_histogram
 MAX_INT = np.iinfo(np.intp).max
 
 # Module globals
-VERBOSE = True  # enables online print statements
+VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', True)  # enables online print statements
 CLAMP_DTYPE = 'short'  # do not edit
 NPOINTS = 64 ** 3
 
