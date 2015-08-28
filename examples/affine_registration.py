@@ -14,10 +14,10 @@ from optparse import OptionParser
 import time
 
 import numpy as np
+import nibabel as nb
 
-from nipy.algorithms.registration import HistogramRegistration, resample
+from nireg import HistogramRegistration, resample
 from nipy.utils import example_data
-from nipy import load_image, save_image
 
 print('Scanning data directory...')
 
@@ -76,6 +76,8 @@ if not opts.optimizer == None:
     optimizer = opts.optimizer
 if not opts.tol == None:
     tol = float(opts.tol)
+else:
+    tol = 1e-2
 
 # Print messages
 print('Source brain: %s' % source)
@@ -88,8 +90,8 @@ print('Tolerance: %f' % tol)
 
 # Get data
 print('Fetching image data...')
-I = load_image(source_file)
-J = load_image(target_file)
+I = nb.load(source_file)
+J = nb.load(target_file)
 
 # Perform affine registration
 # The output is an array-like object such that
@@ -114,8 +116,10 @@ print('  Resampling time: %f sec' % (toc - tic))
 outroot = source + '_TO_' + target
 outimg = outroot + '.nii.gz'
 print ('Saving resampled source in: %s' % outimg)
-save_image(It, outimg)
+nb.save(It, outimg)
 
 # Save transformation matrix
+"""
 outparams = outroot + '.npy'
 np.save(outparams, np.asarray(T))
+"""
