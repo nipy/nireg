@@ -1,15 +1,3 @@
-# vim ft=yaml
-# Multiple lines can be made a single "virtual line" because of the way that
-# Travis munges each line before executing it to print out the exit status.
-# It's okay for it to be on multiple physical lines, so long as you remember:
-# - There can't be any leading "-"s - All newlines will be removed, so use
-# ";"s
-sudo: false  # To use travis container infrastructure
-addons:
-  apt:
-    packages:
-        - libblas-dev
-        - liblapack-dev
 language: python
 cache:
   directories:
@@ -19,78 +7,36 @@ env:
         - DEPENDS="numpy scipy sympy matplotlib nibabel"
         - INSTALL_TYPE="setup"
 python:
-    - 2.6
-    - 3.2
-    - 3.3
-    - 3.4
-    - 3.5
-
+- 2.6
+- 3.2
+- 3.3
+- 3.4
 matrix:
   include:
-    - python: 2.7
-      env:
-        - COVERAGE=1
-    # Absolute minimum dependencies
-    - python: 2.7
-      env:
-        # Definitive source for these in nipy/info.py
-        - DEPENDS="numpy==1.6.0 scipy==0.9.0 sympy==0.7.0 nibabel==1.2.0"
-    # Test compiling against external lapack
-    - python: 3.4
-      env:
-        - NIPY_EXTERNAL_LAPACK=1
-    - python: 2.7
-      env:
-        - INSTALL_TYPE=sdist
-        - DEPENDS="numpy==1.6.0"
-    - python: 2.7
-      env:
-        - INSTALL_TYPE=wheel
-        - DEPENDS="numpy==1.6.0"
-    - python: 2.7
-      env:
-        - INSTALL_TYPE=requirements
-        - DEPENDS=
-
+  - python: 2.7
+    env:
+    - COVERAGE=--with-coverage
 before_install:
-    - source tools/travis_tools.sh
-    - virtualenv --python=python venv
-    - source venv/bin/activate
-    - python --version # just to check
-    - pip install -U pip
-    - retry pip install nose # always
-    - wheelhouse_pip_install $DEPENDS
-    - if [ "${COVERAGE}" == "1" ]; then
-      pip install coverage;
-      pip install coveralls;
-      fi
-# command to install dependencies
-# e.g. pip install -r requirements.txt # --use-mirrors
+- sudo apt-get install -qq libatlas-dev libatlas-base-dev gfortran libpng-dev
+- pip install --no-index -f http://wheels2.astropy.org -f https://nipy.bic.berkeley.edu/scipy_installers/travis
+  scipy matplotlib;
+- pip install nibabel
+- if [ "${COVERAGE}" == "--with-coverage" ]; then pip install coverage; pip install
+  coveralls; fi
 install:
-    - |
-      if [ "$INSTALL_TYPE" == "setup" ]; then
-          python setup.py install
-      elif [ "$INSTALL_TYPE" == "sdist" ]; then
-        python setup_egg.py egg_info  # check egg_info while we're here
-        python setup_egg.py sdist
-        wheelhouse_pip_install dist/*.tar.gz
-      elif [ "$INSTALL_TYPE" == "wheel" ]; then
-        pip install wheel
-        python setup_egg.py bdist_wheel
-        wheelhouse_pip_install dist/*.whl
-      elif [ "$INSTALL_TYPE" == "requirements" ]; then
-        wheelhouse_pip_install -r requirements.txt
-        python setup.py install
-      fi
-# command to run tests, e.g. python setup.py test
+- python setup.py install
 script:
-    # Change into an innocuous directory and find tests from installation
-    - mkdir for_testing
-    - cd for_testing
-    - if [ "${COVERAGE}" == "1" ]; then
-      cp ../.coveragerc .;
-      COVER_ARGS="--with-coverage --cover-package nipy";
-      fi
-    - $PYTHON ../tools/nipnost --verbosity=3 $COVER_ARGS nipy
+- mkdir for_testing
+- cd for_testing
+- if [ "${COVERAGE}" == "--with-coverage" ]; then cp ../.coveragerc .; fi
+- $PYTHON ../tools/nipnost $COVERAGE `python -c "import os; import nireg; print(os.path.dirname(nireg.__file__))"`
 after_success:
-    - if [ "${COVERAGE}" == "1" ]; then coveralls; fi
+- if [ "${COVERAGE}" == "--with-coverage" ]; then coveralls; fi
+deploy:
+  provider: pypi
+  user: alexis-roche
+  password:
+    secure: JVVrRUGF+7AZmW92IyVOpyUPsPyZC+3J5I03JHq//kW/GInxojoUsBXeLkXgsVgBrxMKG3KjRrReEl4gRRxF3jN6Sk9fjqCGPXHgRsRYJECUWl+JcJk96uRCgn9BjawVU4gXrw8vQWAuauke0RYFTem+riRgPb5HEoeAzG5TyNaBe9Lip/g+mNUdJXVB35fgDQDisWXBzBwmv5RAr36eB5Q0PzpGzTj80aUeN3PAlvM51HGUtTyQuLQA4ZyMppVkt7+d+nXzefkqMbwbahCglg+K1G0oixdqMuUIpiY2+VbLhgDrynq0uk2JO6enCnmkGJlTzEZyRpPO0UfEAQ2pqcVchnG19O9dAw/QuLPBTaRS53UQkrgwil1n4DTjsUiS+weGQxze13Dt76Duh/Yyou611rxEqHrF0TSlQcACuj5dcOC2Y0SburfxBVzaOto1Bdb2Oc00DF6racePZL4S3Kc0symMm3uNHsok+A7RW/tAylY48n9/pc9hvKiHzzhr4pP1EQJx6DglWUQ+PHw3jOGopbiZpqH8V5Qg1GwXz38uP6ViWXLBj+4VhYp/TriXMO6+b7Ptektsz1U2KS+gPHH/Mtw6fd5YFBNfq0TP7Qq2lZ8/WB7Y6T/ZtNV6cAzh6kwgEmbOd6FgzeaBgYqOxIeE7q+d44+GyF7C75X57QE=
+  on:
+    tags: true
+    branch: master

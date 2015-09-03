@@ -30,8 +30,7 @@ from ._register import (_cspline_transform,
                         _cspline_sample3d,
                         _cspline_sample4d)
 
-
-VERBOSE = os.environ.get('REGISTER_DEBUG_PRINT', False)
+VERBOSE = os.environ.get('NIPY_DEBUG_PRINT', False)
 INTERLEAVED = None
 XTOL = 1e-5
 FTOL = 1e-5
@@ -915,11 +914,11 @@ class SpaceTimeRealign(Realign4d):
             transformation class to use to calculate transformations between
             the volumes. Default is :class:``Rigid``
         """
-        if slice_times is None:
+        if slice_times == None:
             raise ValueError("slice_times must be set for space/time "
                              "registration; use SpaceRealign for space-only "
                              "registration")
-        if slice_info is None:
+        if slice_info == None:
             raise ValueError("slice_info cannot be None")
         try:
             len(slice_info)
