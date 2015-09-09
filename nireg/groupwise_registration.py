@@ -68,7 +68,7 @@ def make_grid(dims, subsampling=(1, 1, 1), borders=(0, 0, 0)):
 
 
 def guess_slice_axis_and_direction(slice_info, affine):
-    if slice_info == None:
+    if slice_info is None:
         orient = io_orientation(affine)
         slice_axis = int(np.where(orient[:, 0] == 2)[0])
         slice_direction = int(orient[slice_axis, 1])
@@ -119,12 +119,12 @@ class Image4d(object):
         self._init_timing_parameters()
 
     def get_data(self):
-        if self._data == None:
+        if self._data is None:
             self._load_data()
         return self._data
 
     def get_shape(self):
-        if self._shape == None:
+        if self._shape is None:
             self._load_data()
         return self._shape
 
@@ -206,7 +206,7 @@ class Realign4dAlgorithm(object):
         # Initialize space/time transformation parameters
         self.affine = im4d.affine
         self.inv_affine = np.linalg.inv(self.affine)
-        if transforms == None:
+        if transforms is None:
             self.transforms = [affine_class() for scan in range(self.nscans)]
         else:
             self.transforms = transforms
@@ -459,7 +459,7 @@ class Realign4dAlgorithm(object):
         to right compose each head_average-to-scanner transform with
         the refscan's 'to head_average' transform.
         """
-        if self.refscan == None:
+        if self.refscan is None:
             return
         Tref_inv = self.transforms[self.refscan].inv()
         for t in range(self.nscans):
@@ -708,7 +708,7 @@ class Realign4d(object):
         """
         Generic initialization method.
         """
-        if slice_times == None:
+        if slice_times is None:
             tr = 1.0
             slice_times = 0.0
             time_interp = False
@@ -716,7 +716,7 @@ class Realign4d(object):
             time_interp = True
         self.slice_times = slice_times
         self.tr = tr
-        if tr == None:
+        if tr is None:
             raise ValueError('Repetition time cannot be None')
         if not isinstance(images, (list, tuple, np.ndarray)):
             images = [images]
@@ -850,7 +850,7 @@ class Realign4d(object):
         else:
             transforms = self._within_run_transforms
         runs = range(len(self._runs))
-        if r == None:
+        if r is None:
             data = [resample4d(self._runs[r], transforms=transforms[r],
                                time_interp=self._time_interp) for r in runs]
             return [Nifti1Image(data[r], self._runs[r].affine)

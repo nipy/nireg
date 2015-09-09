@@ -66,13 +66,13 @@ similarity = 'crl1'
 renormalize = 'default'
 interp = 'pv'
 optimizer = 'powell'
-if not opts.similarity == None:
+if opts.similarity is not None:
     similarity = opts.similarity
-if not opts.renormalize == None:
-    renormalize = opts.renormalize
-if not opts.interp == None:
+if opts.renormalize is not None:
+    renormalize = bool(int(opts.renormalize))
+if opts.interp is not None:
     interp = opts.interp
-if not opts.optimizer == None:
+if opts.optimizer is not None:
     optimizer = opts.optimizer
 if not opts.tol == None:
     tol = float(opts.tol)

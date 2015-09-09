@@ -1,4 +1,10 @@
 language: python
+cache:
+  directories:
+    - $HOME/.cache/pip
+env:
+    global:
+        - DEPENDS="numpy scipy sympy matplotlib nibabel"
 python:
 - 2.6
 - 3.2

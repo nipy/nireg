@@ -71,11 +71,11 @@ def resample(moving, transform=None, reference=None,
     if not len(ref_shape) == 3 or not ref_aff.shape == (4, 4):
         raise ValueError('Input image should be 3D')
     data = moving.get_data()
-    if dtype == None:
+    if dtype is None:
         dtype = data.dtype
 
     # Assume identity transform by default
-    if transform == None:
+    if transform is None:
         transform = Affine()
 
     # Detect what kind of input transform
