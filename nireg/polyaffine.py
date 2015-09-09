@@ -12,8 +12,7 @@ TINY_SIGMA = 1e-200
 class PolyAffine(Transform):
 
     def __init__(self, centers, affines, sigma, glob_affine=None):
-        """
-        centers: N times 3 array
+        """Poly-affine transformation constructor.
 
         We are given a set of affine transforms T_i with centers x_i,
         all in homogeneous coordinates. The polyaffine transform is
@@ -23,8 +22,28 @@ class PolyAffine(Transform):
 
         where w_i(x) = g(x-x_i)/Z(x) are normalized Gaussian weights
         that sum up to one for every x.
-        """
 
+        Parameters
+        ----------
+        centers : ndarray
+          Local affine transform centers. Should be with shape (N, 3),
+          where N is the number of local affine transforms.
+
+        affines : sequence
+          Defines the local affine transforms associated with
+          `centers`. Elements should be array-like objects with shape
+          (4, 4) or nireg-like transform objects endowed with an
+          `as_affine` method.
+
+        sigma : float
+          Isotropic standard deviation used for the spatial weighting
+          of local affine transforms.
+
+        glob_affine: array-like or nireg-like affine object
+           Optionally defines a global affine transform to be
+           right-composed with the local affines defined by
+           `affines`. If None, the identity transform is assumed.
+        """
         # Format input arguments
         self.centers = np.asarray(centers, dtype='double', order='C')
         self.sigma = np.zeros(3)
