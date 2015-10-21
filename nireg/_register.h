@@ -1,0 +1,1 @@
+#define PY_ARRAY_UNIQUE_SYMBOL _register_ARRAY_API

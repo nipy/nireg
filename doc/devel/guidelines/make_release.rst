@@ -17,23 +17,10 @@ in the ``testers`` module of that package.  nipy has Makefile targets for their
 use.  The relevant targets are::
 
     make check-version-info
-    make check-files
-    make sdist-tests
 
-The first installs the code from a git archive, from the repository, and for
+This installs the code from a git archive, from the repository, and for
 in-place use, and runs the ``get_info()`` function to confirm that installation
 is working and information parameters are set correctly.
-
-The second (``sdist-tests``) makes an sdist source distribution archive,
-installs it to a temporary directory, and runs the tests of that install.
-
-If you have a version of nibabel trunk past February 11th 2011, there will also
-be a functional make target::
-
-    make bdist-egg-tests
-
-This builds an egg (which is a zip file), hatches it (unzips the egg) and runs
-the tests from the resulting directory.
 
 .. _release-checklist:
 
@@ -62,6 +49,20 @@ Release checklist
 
 * Check the copyright years in ``doc/conf.py`` and ``LICENSE``
 
+* Refresh the ``README.rst`` text from the ``LONG_DESCRIPTION`` in ``info.py``
+  by running ``make refresh-readme``.
+
+  Check the output of::
+
+    rst2html.py README.rst > ~/tmp/readme.html
+
+  because this will be the output used by pypi_
+
+* Check the dependencies listed in ``nipy/info.py`` (e.g.
+  ``NUMPY_MIN_VERSION``) and in ``doc/users/installation.rst``.  They should
+  at least match. Do they still hold?  Make sure ``.travis.yml`` is testing
+  these minimum dependencies specifically.
+
 * Check the examples in python 2 and python 3, by running something like::
 
     cd ..
@@ -72,17 +73,15 @@ Release checklist
   printout that the ``run_log_examples.py`` script puts onto stdout while
   running.
 
-* Check the ``long_description`` in ``nipy/info.py``.  Check it matches the
-  ``README`` in the root directory, maybe with ``vim`` ``diffthis`` command.
-
 * Do a final check on the `nipy buildbot`_
 
-* If you have travis-ci_ building set up you might want to push the code in its
-  current state to a branch that will build, e.g::
+* If you have travis-ci_ building set up on your own fork of nipy you might
+  want to push the code in its current state to a branch that will build,
+  e.g::
 
     git branch -D pre-release-test # in case branch already exists
     git co -b pre-release-test
-    git push origin pre-release-test
+    git push your-github-user pre-release-test
 
 * Make sure all the ``.c`` generated files are up to date with Cython sources
   with::
@@ -101,19 +100,11 @@ Release checking - buildbots
     make distclean
     python -m compileall .
     make sdist-tests
-    make bdist-egg-tests
     make check-version-info
     make check-files
 
 * You need to review the outputs for errors; at the moment this buildbot builder
   does not check whether these tests passed or failed.
-* ``make bdist-egg-tests`` may well fail because of a problem with the script
-  tests; if you have a recent (>= Jan 15 2013) nibabel ``nisext`` package, you
-  could try instead doing::
-
-    python -c 'from nisext.testers import bdist_egg_tests; bdist_egg_tests("nipy", label="not slow and not script_test")'
-
-  Eventually we should update the ``bdist-egg-tests`` makefile target.
 * ``make check-version-info`` checks how the commit hash is stored in the
   installed files.  You should see something like this::
 
@@ -132,33 +123,6 @@ Release checking - buildbots
   Fix ``setup.py`` to carry across any files that should be in the distribution.
 * Check the documentation doctests pass from
   http://nipy.bic.berkeley.edu/builders/nipy-doc-builder
-* You may have virtualenvs for different python versions.  Check the tests
-  pass for different configurations.  If you have pytox_ and a network
-  connection, and lots of pythons installed, you might be able to do::
-
-    tox
-
-  and get tests for python 2.5, 2.6, 2.7, 3.2.  I (MB) have my own set of
-  virtualenvs installed and I've set them up to run with::
-
-    tox -e python25,python26,python27,python32,np-1.2.1
-
-  The trick was only to define these ``testenv`` sections in ``tox.ini``.
-
-  These two above run with::
-
-    make tox-fresh
-    make tox-stale
-
-  respectively.
-
-  The long-hand not-tox way looks like this::
-
-    workon python26
-    make sdist-tests
-    deactivate
-
-  etc for the different virtualenvs.
 
 Doing the release
 =================
@@ -197,27 +161,16 @@ Doing the release
   builds will appear in http://nipy.bic.berkeley.edu/nipy-dist . Download the
   builds and upload to pypi.
 
-* Trigger binary builds for OSX from the buildbots ``nipy-bdist-mpkg-2.6``,
-  ``nipy-bdist-mpkg-2.7``, ``nipy-bdist-mpkg-3.3``. ``egg`` and ``mpkg`` builds
-  will appear in http://nipy.bic.berkeley.edu/nipy-dist .  Download the eggs and
-  upload to pypi.
+* Trigger binary builds for OSX from travis-ci:
 
-* Download the ``mpkg`` builds, maybe with::
+    * https://travis-ci.org/MacPython/nipy-wheels
+    * https://github.com/MacPython/nipy-wheels
 
-    scp -r buildbot@nipy.bic.berkeley.edu:nibotmi/public_html/nipy-dist/*.mpkg .
+  Upload the resulting wheels to pypi from http://wheels.scipy.org;
 
-  Make sure you have `github bdist_mpkg`_ installed, for the root user.  For
-  each ``mpkg`` directory, run::
+* Tag the release with tag of form ``0.5.0``::
 
-    sudo reown_mpkg nipy-0.3.0.dev-py2.6-macosx10.6.mpkg root admin
-    zip -r nipy-0.3.0.dev-py2.6-macosx10.6.mpkg.zip nipy-0.3.0.dev-py2.6-macosx10.6.mpkg
-
-  Upload the ``mpkg.zip`` files. (At the moment, these don't seem to store the
-  scripts - needs more work)
-
-* Tag the release with tag of form ``0.3.0``::
-
-    git tag -am 'Second main release' 0.3.0
+    git tag -am 'Second main release' 0.5.0
 
 * Now the version number is OK, push the docs to github pages with::
 
@@ -231,11 +184,11 @@ Doing the release
 
   * Branch to maintenance::
 
-      git co -b maint/0.2.x
+      git co -b maint/0.5.x
 
     Set ``_version_extra`` back to ``.dev`` and bump ``_version_micro`` by 1.
-    Thus the maintenance series will have version numbers like - say - '0.2.1.dev'
-    until the next maintenance release - say '0.2.1'.  Commit. Don't forget to
+    Thus the maintenance series will have version numbers like - say - '0.5.1.dev'
+    until the next maintenance release - say '0.5.1'.  Commit. Don't forget to
     push upstream with something like::
 
       git push upstream maint/0.2.x --set-upstream
@@ -264,7 +217,6 @@ Doing the release
 
 * Announce to the mailing lists.
 
-.. _pytox: http://codespeak.net/tox
 .. _setuptools intro: http://packages.python.org/an_example_pypi_project/setuptools.html
 .. _travis-ci: http://travis-ci.org
 

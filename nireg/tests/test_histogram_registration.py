@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #!/usr/bin/env python
 
 import numpy as np
@@ -112,6 +113,15 @@ def test_correlation_ratio():
 
 def test_correlation_ratio_L1():
     _test_similarity_measure('crl1', 1.0)
+
+
+def test_supervised_likelihood_ratio():
+    I = Nifti1Image(make_data_int16(), dummy_affine)
+    J = Nifti1Image(make_data_int16(), dummy_affine)
+    R = HistogramRegistration(I, J, similarity='slr', dist=np.ones((256, 256)) / (256 ** 2))
+    assert_almost_equal(R.eval(Affine()), 0.0)
+    assert_raises(ValueError, HistogramRegistration, I, J, similarity='slr', dist=None)
+    assert_raises(ValueError, HistogramRegistration, I, J, similarity='slr', dist=np.random.rand(100, 127))
 
 
 def test_normalized_mutual_information():

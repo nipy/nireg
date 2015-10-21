@@ -15,11 +15,11 @@ Must Have
 =========
 
 * Python_ 2.6 or later
-* NumPy_ 1.2 or later:  Numpy is an array library for Python
-* SciPy_ 0.7 or later:  Scipy contains scientific computing libraries based on
+* NumPy_ 1.6 or later: Numpy is an array library for Python
+* SciPy_ 0.9 or later: Scipy contains scientific computing libraries based on
   numpy
-* Sympy_ 0.6.6 or later: Sympy is a symbolic mathematics library for Python.  We
-  use it for statistical formulae.
+* Sympy_ 0.7.0 or later: Sympy is a symbolic mathematics library for Python.
+  We use it for statistical formulae.
 * Nibabel_ 1.2.0 or later.  Nibabel loads and saves images in neuroimaging
   formats.
 
@@ -58,13 +58,16 @@ Recommended::
 For OSX
 ^^^^^^^
 
-Install Python, Numpy, and Scipy via their respective ``dmg`` installers.
+We recommend you install Python either via the installers available via
+https://python.org, or via Homebrew (http://brew.sh/).
 
-Install via distribute_ / setuptools_ and ``easy_install``. See the distribute_
-page for how to install ``easy_install`` and related tools. Then (from the
-command prompt)::
+Next install numpy, scipy and sympy::
 
-    easy_install nipy
+    pip install numpy scipy sympy
+
+Finally, install nipy::
+
+    pip install nipy
 
 For Windows
 ^^^^^^^^^^^
@@ -104,22 +107,15 @@ Do all the installs by hand:
   your windows path.
 * Download Numpy and Scipy ``exe`` installers for your Python version from their
   respective Numpy and Scipy download sites.
-* Install distribute_ to give you ``easy_install``.
-* Install pip_ using ``easy_install`` from a windows ``cmd`` shell::
-
-    easy_install pip
-
+* Install pip_ using by following the instructions at : http://pip.readthedocs.org/en/stable/installing
 * Install sympy and nibabel using pip from a window ``cmd`` shell::
 
     pip install sympy
     pip install nibabel
 
-* On 32-bit Windows, install nipy using ``easy_install``::
-
-    easy_install nipy
-
-  This will pick up and use the ``exe`` installer.  For 64-bits install use the
-  installer at the `unofficial windows binaries`_ site.
+* On 32-bit Windows, download and install the ``.exe`` installer from `nipy
+  pypi`_.  For 64-bits install use the installer at the `unofficial windows
+  binaries`_ site.
 
 Otherwise
 ^^^^^^^^^
@@ -158,7 +154,7 @@ documentation.  There you will find information on building NIPY, the
 required software packages and our developer guidelines.
 
 If you are primarily interested in using NIPY, download the source
-tarball from `nipy pypi` and follow these instructions for building.  The
+tarball from `nipy pypi`_ and follow these instructions for building.  The
 installation process is similar to other Python packages so it will be familiar
 if you have Python experience.
 

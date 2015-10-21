@@ -11,6 +11,8 @@ Roche, Alexis (2011) A four-dimensional registration algorithm with application
 to joint correction of motion and slice timing in fMRI. *Medical Imaging, IEEE
 Transactions on*;  30:1546--1554
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import warnings
@@ -20,8 +22,8 @@ from nibabel import (Nifti1Image, io_orientation)
 from nibabel.affines import apply_affine
 
 from .externals.six import string_types
-
 from .slicetiming import timefuncs
+from .type_check import (check_type, check_type_and_shape)
 from .optimizer import configure_optimizer, use_derivatives
 from .affine import Rigid, Affine
 from ._register import (_cspline_transform,
@@ -175,6 +177,7 @@ class Image4d(object):
             self._data = None
 
 
+
 class Realign4dAlgorithm(object):
 
     def __init__(self,
@@ -183,6 +186,7 @@ class Realign4dAlgorithm(object):
                  transforms=None,
                  time_interp=True,
                  subsampling=(1, 1, 1),
+                 refscan=0,
                  borders=(1, 1, 1),
                  optimizer='ncg',
                  optimize_template=True,
@@ -191,9 +195,20 @@ class Realign4dAlgorithm(object):
                  gtol=GTOL,
                  stepsize=STEPSIZE,
                  maxiter=MAXITER,
-                 maxfun=MAXFUN,
-                 refscan=0):
+                 maxfun=MAXFUN):
 
+        # Check arguments
+        check_type_and_shape(subsampling, int, 3)
+        check_type(refscan, int, accept_none=True)
+        check_type_and_shape(borders, int, 3)
+        check_type(xtol, float)
+        check_type(ftol, float)
+        check_type(gtol, float)
+        check_type(stepsize, float)
+        check_type(maxiter, int)
+        check_type(maxfun, int, accept_none=True)
+
+        # Get dimensional parameters
         self.dims = im4d.get_shape()
         self.nscans = self.dims[3]
         # Reduce borders if spatial image dimension too small to avoid
@@ -226,7 +241,7 @@ class Realign4dAlgorithm(object):
         # The reference scan conventionally defines the head
         # coordinate system
         self.optimize_template = optimize_template
-        if not optimize_template and refscan == None:
+        if not optimize_template and refscan is None:
             self.refscan = 0
         else:
             self.refscan = refscan
@@ -328,7 +343,7 @@ class Realign4dAlgorithm(object):
 
         V/V0 = [nV* + (x-m*)^2] / [nV0* + (x-m0*)^2]
         """
-        fixed = range(self.nscans)
+        fixed = list(range(self.nscans))
         fixed.remove(t)
         aux = self.data[:, fixed]
         if self.optimize_template:
@@ -819,7 +834,7 @@ class Realign4d(object):
         maxfun : int 
             Maximum number of function evaluations in maxfun.
         """
-        if between_loops == None:
+        if between_loops is None:
             between_loops = loops
         t = realign4d(self._runs,
                       affine_class=self.affine_class,
@@ -862,6 +877,7 @@ class Realign4d(object):
 
 
 class SpaceTimeRealign(Realign4d):
+
     def __init__(self, images, tr, slice_times, slice_info,
                  affine_class=Rigid):
         """ Spatiotemporal realignment class for fMRI series.
@@ -924,6 +940,7 @@ class SpaceTimeRealign(Realign4d):
 
 
 class SpaceRealign(Realign4d):
+
     def __init__(self, images, affine_class=Rigid):
         """ Spatial registration of time series with no time interpolation
 

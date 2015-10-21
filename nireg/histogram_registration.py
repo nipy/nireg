@@ -3,6 +3,9 @@
 """
 Intensity-based image registration
 """
+from __future__ import absolute_import
+from __future__ import print_function
+
 import os
 import numpy as np
 import scipy.ndimage as nd
@@ -80,6 +83,9 @@ class HistogramRegistration(object):
           supervised log-likelihood ratio. If a callable, it should
           take a two-dimensional array representing the image joint
           histogram as an input and return a float.
+       dist: None or array-like
+          Joint intensity probability distribution model for use with the 
+          'slr' measure. Should be of shape (from_bins, to_bins).
        interp : str
          Interpolation method.  One of 'pv': Partial volume, 'tri':
          Trilinear, 'rand': Random interpolation.  See ``joint_histogram.c``
@@ -88,7 +94,6 @@ class HistogramRegistration(object):
          kernels used to smooth the `from` and `to` images,
          respectively. If float, the same kernel size is applied to
          both images. If 0, no smoothing is applied.
-
         """
         # Binning sizes
         from_bins, to_bins = unpack(bins, int)
@@ -98,8 +103,12 @@ class HistogramRegistration(object):
 
         # Clamping of the `from` image. The number of bins may be
         # overriden if unnecessarily large.
-        data, from_bins = clamp(from_img, from_bins, mask=from_mask,
-                                sigma=self._from_sigma)
+        data, from_bins_adjusted = clamp(from_img,
+                                         from_bins,
+                                         mask=from_mask,
+                                         sigma=self._from_sigma)
+        if not similarity == 'slr':
+            from_bins = from_bins_adjusted
         self._from_img = Nifti1Image(data, from_img.get_affine())
 
         # Set field of view in the `from` image with potential
@@ -117,8 +126,12 @@ class HistogramRegistration(object):
                      npoints=npoints)
 
         # Clamping of the `to` image including padding with -1
-        data, to_bins = clamp(to_img, to_bins, mask=to_mask,
-                              sigma=self._to_sigma)
+        data, to_bins_adjusted = clamp(to_img,
+                                       to_bins,
+                                       mask=to_mask,
+                                       sigma=self._to_sigma)
+        if not similarity == 'slr':
+            to_bins = to_bins_adjusted
         self._to_data = -np.ones(np.array(to_img.shape) + 2, dtype=CLAMP_DTYPE)
         self._to_data[1:-1, 1:-1, 1:-1] = data
         self._to_inv_affine = inverse_affine(to_img.get_affine())
@@ -132,8 +145,8 @@ class HistogramRegistration(object):
         self._set_similarity(similarity, renormalize, dist=dist)
 
     def _get_interp(self):
-        return interp_methods.keys()[\
-            interp_methods.values().index(self._interp)]
+        return list(interp_methods.keys())[\
+            list(interp_methods.values()).index(self._interp)]
 
     def _set_interp(self, interp):
         self._interp = interp_methods[interp]
@@ -184,6 +197,12 @@ class HistogramRegistration(object):
 
     def _set_similarity(self, similarity, renormalize=False, dist=None):
         if similarity in builtin_simi:
+            if similarity == 'slr':
+                if dist is None:
+                    raise ValueError('slr measure requires a joint intensity distribution model, '
+                                     'see `dist` argument of HistogramRegistration')
+                if dist.shape != self._joint_hist.shape:
+                    raise ValueError('Wrong shape for the `dist` argument')
             self._similarity = similarity
             self._similarity_call =\
                 builtin_simi[similarity](self._joint_hist.shape,
@@ -377,7 +396,7 @@ class HistogramRegistration(object):
 
         # Output
         if VERBOSE:
-            print ('Optimizing using %s' % fmin.__name__)
+            print('Optimizing using %s' % fmin.__name__)
         kwargs['callback'] = callback
         Tv.param = fmin(cost, tc0, *args, **kwargs)
         return Tv.optimizable

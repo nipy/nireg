@@ -5,6 +5,7 @@ cache:
 env:
     global:
         - DEPENDS="numpy scipy sympy matplotlib nibabel"
+        - INSTALL_TYPE="setup"
 python:
 - 2.6
 - 3.2

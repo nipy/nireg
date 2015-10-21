@@ -22,7 +22,7 @@ extern "C" {
  * Use extension numpy symbol table
  */
 #define NO_IMPORT_ARRAY
-#include "_registration.h"
+#include "_register.h"
 
 #include <numpy/arrayobject.h>
 

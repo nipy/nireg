@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 import numpy as np
@@ -203,7 +204,7 @@ def subgrid_affine(affine, slices):
 
 
 class Affine(Transform):
-    param_inds = range(12)
+    param_inds = list(range(12))
 
     def __init__(self, array=None, radius=RADIUS):
         self._direct = True
@@ -371,7 +372,7 @@ class Affine2D(Affine):
 
 
 class Rigid(Affine):
-    param_inds = range(6)
+    param_inds = list(range(6))
 
     def from_matrix44(self, aff):
         """
@@ -403,7 +404,7 @@ class Rigid2D(Rigid):
 
 
 class Similarity(Affine):
-    param_inds = range(7)
+    param_inds = list(range(7))
 
     def from_matrix44(self, aff):
         """
@@ -429,8 +430,8 @@ class Similarity(Affine):
 
     def _set_param(self, p):
         p = np.asarray(p)
-        self._vec12[range(9)] =\
-            (p[[0, 1, 2, 3, 4, 5, 6, 6, 6]] * self._precond[range(9)])
+        self._vec12[list(range(9))] =\
+            (p[[0, 1, 2, 3, 4, 5, 6, 6, 6]] * self._precond[list(range(9))])
 
     param = property(Affine._get_param, _set_param)
 
