@@ -9,7 +9,7 @@ transformations.
 __version__ = '0.3'
 
 # Set symbol for array_import; must come before cimport numpy
-cdef extern from "_registration.h":
+cdef extern from "_register.h":
     int PY_ARRAY_UNIQUE_SYMBOL
 
 
