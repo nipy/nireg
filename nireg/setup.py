@@ -4,6 +4,7 @@ from __future__ import print_function
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 import os
 
+import np_distutils_monkey # ensure cythonization with numpy version > 1.10
 
 def configuration(parent_package='', top_path=None):
 
